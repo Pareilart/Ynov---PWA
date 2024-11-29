@@ -70,55 +70,32 @@ function close() {
 
 <template>
   <div
-      v-if="needRefresh"
-      class="pwa-toast"
-      aria-labelledby="toast-message"
-      role="alert"
+    v-if="needRefresh"
+    class="fixed bottom-4 right-4 max-w-sm bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-4 transform transition-all"
+    role="alert"
   >
-    <div class="message">
-      <span id="toast-message">
-        {{ title }}
-      </span>
-    </div>
-    <div class="buttons">
-      <button  type="button" class="reload" @click="updateServiceWorker()">
-        Reload
-      </button>
-      <button type="button" @click="close">
-        Close
-      </button>
+    <div class="flex items-center space-x-3">
+      <div class="flex-1">
+        <p class="text-sm text-gray-700 dark:text-gray-300">
+          {{ title }}
+        </p>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button
+          type="button"
+          class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-md transition-colors"
+          @click="updateServiceWorker()"
+        >
+          Reload
+        </button>
+        <button
+          type="button"
+          class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-md transition-colors"
+          @click="close"
+        >
+          Close
+        </button>
+      </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.pwa-toast {
-  position: fixed;
-  right: 0;
-  bottom: 0;
-  margin: 16px;
-  padding: 12px;
-  border: 1px solid #8885;
-  border-radius: 4px;
-  z-index: 1;
-  text-align: left;
-  box-shadow: 3px 4px 5px 0 #8885;
-  display: grid;
-}
-.pwa-toast .message {
-  margin-bottom: 8px;
-}
-.pwa-toast .buttons {
-  display: flex;
-}
-.pwa-toast button {
-  border: 1px solid #8885;
-  outline: none;
-  margin-right: 5px;
-  border-radius: 2px;
-  padding: 3px 10px;
-}
-.pwa-toast button.reload {
-  display: block;
-}
-</style>
