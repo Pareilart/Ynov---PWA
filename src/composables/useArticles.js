@@ -1,77 +1,83 @@
-import { ref } from "vue";
+import { useQuery } from '@tanstack/vue-query';
+import { ref, watch } from 'vue';
 
 export function useArticles() {
-  const articles = ref([]);
+  const CACHE_KEY = 'news-articles';
+  const CACHE_DURATION = 60 * 60 * 1000; // 1 heure en millisecondes
   const lastUpdate = ref(null);
-  const CACHE_KEY = "news-articles";
-  const CACHE_DURATION = 60 * 60 * 1000; // 5 minutes en millisecondes
+  const savedArticles = ref(JSON.parse(localStorage.getItem('savedArticles') || '[]'));
 
-  const fetchNews = async () => {
-    // Vérifier le cache
-    const cachedData = localStorage.getItem(CACHE_KEY);
-    if (cachedData) {
-      const { data, timestamp } = JSON.parse(cachedData);
+  const getCachedData = () => {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      const { data, timestamp } = JSON.parse(cached);
       const isValid = Date.now() - timestamp < CACHE_DURATION;
-
       if (isValid) {
-        articles.value = data;
-        lastUpdate.value = timestamp;
-        return;
+        lastUpdate.value = new Date(timestamp);
+        return data;
       }
     }
-
-    // Si pas de cache valide, faire l'appel API
-    try {
-      const response = await fetch(
-        `https://newsapi.org/v2/top-headlines?country=us&apiKey=${
-          import.meta.env.VITE_NEWS_API_KEY
-        }`
-      );
-      const data = await response.json();
-      articles.value = data.articles;
-
-      // Mettre en cache
-      lastUpdate.value = Date.now();
-      localStorage.setItem(
-        CACHE_KEY,
-        JSON.stringify({
-          data: data.articles,
-          timestamp: lastUpdate.value,
-        })
-      );
-    } catch (error) {
-      console.error("Erreur lors de la récupération des articles:", error);
-    }
+    fetchTopHeadlinesNewsArticles();
+    return null;
   };
 
-  const refreshNews = async () => {
-    try {
-      const response = await fetch(
-        `https://newsapi.org/v2/top-headlines?country=us&apiKey=${
-          import.meta.env.VITE_NEWS_API_KEY
-        }`
-      );
-      const data = await response.json();
-      articles.value = data.articles;
+  const fetchTopHeadlinesNewsArticles = async () => {
+    const response = await fetch(
+      `https://newsapi.org/v2/top-headlines?country=us&apiKey=${
+        import.meta.env.VITE_NEWS_API_KEY
+      }`
+    );
+    const data = await response.json();
+    const timestamp = Date.now();
+    lastUpdate.value = new Date(timestamp);
+    
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      data: data.articles,
+      timestamp
+    }));
+    
+    return data.articles;
+  };
 
-      // Mettre à jour le cache
-      lastUpdate.value = Date.now();
-      localStorage.setItem(
-        CACHE_KEY,
-        JSON.stringify({
-          data: data.articles,
-          timestamp: lastUpdate.value,
-        })
-      );
-    } catch (error) {
-      console.error("Erreur lors de la rafraîchissement des articles:", error);
-    }
+  const { data: articles, isLoading, error, refetch } = useQuery({
+    queryKey: [CACHE_KEY],
+    queryFn: fetchTopHeadlinesNewsArticles,
+    staleTime: CACHE_DURATION,
+    cacheTime: CACHE_DURATION,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    initialData: getCachedData,
+    initialDataUpdatedAt: () => {
+      const cached = localStorage.getItem(CACHE_KEY);
+      return cached ? JSON.parse(cached).timestamp : 0;
+    },
+  });
+
+  const saveArticle = (article) => {
+    const articles = [...savedArticles.value, article]
+    localStorage.setItem('savedArticles', JSON.stringify(articles))
+    savedArticles.value = articles
+  };
+
+  const removeArticle = (article) => {
+    const articles = savedArticles.value.filter(a => a.url !== article.url)
+    localStorage.setItem('savedArticles', JSON.stringify(articles))
+    savedArticles.value = articles
+  };
+
+  const getSavedArticle = () => {
+    return savedArticles.value;
   };
 
   return {
     articles,
-    fetchNews,
-    refreshNews,
+    isLoading,
+    error,
+    refreshNews: refetch,
+    savedArticles,
+    saveArticle,
+    removeArticle,
     lastUpdate,
+    getSavedArticle,
   };
 }
